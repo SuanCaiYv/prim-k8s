@@ -1,0 +1,44 @@
+log_level = "info"
+
+[server]
+ip_version = "v4"
+public_service = true
+cluster_address = "127.0.0.1:11220"
+service_address = "127.0.0.1:11222"
+domain = "localhost"
+cert_path = "/Users/slma/RustProjects/prim/server/cert/localhost-server.crt"
+key_path = "/Users/slma/RustProjects/prim/server/cert/localhost-server.key"
+max_connections = 50000
+
+# configuration for quic transport, can be treated as configuration for connection between ends.
+[transport]
+# in milliseconds
+# should be set on clients
+keep_alive_interval = 1000
+# in milliseconds, 3*keep_alive_interval
+# disconnected for such time will kill the connection.
+connection_idle_timeout = 3000
+max_bi_streams = 8
+max_uni_streams = 8
+
+[redis]
+# make sure you have up a redis cluster, for auto run, please see folder "redis-cluster"
+addresses = ["127.0.0.1:16379", "127.0.0.1:16380", "127.0.0.1:16381"]
+passwords = ["Redis.123456", "Redis.123456", "Redis.123456"]
+
+# addresses of scheduler-cluster
+[cluster]
+addresses = ["127.0.0.0:11222"]
+domain = "localhost"
+cert_path = "/Users/slma/RustProjects/prim/server/cert/localhost-server.crt"
+
+[rpc]
+address = "0.0.0.0:11230"
+key_path = "/Users/slma/RustProjects/prim/server/cert/localhost-server.key"
+cert_path = "/Users/slma/RustProjects/prim/server/cert/localhost-server.crt"
+
+[rpc.api]
+address = "127.0.0.1:11330"
+domain = "localhost"
+# notion: here is .pem file
+cert_path = "/Users/slma/RustProjects/prim/server/cert/PrimRootCA.crt"

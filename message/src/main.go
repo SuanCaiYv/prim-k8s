@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/quic-go/quic-go"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -83,7 +86,7 @@ func main() {
 	serviceAddress := os.Getenv("SERVICE_ADDRESS")
 
 	var config Config
-	configPath = "/Users/slma/RustProjects/prim/server/message/config.toml"
+	configPath = "/Users/slma/GolandProjects/prim-k8s/message/src/config.toml"
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
 		fmt.Println("decode toml failed:", err)
@@ -110,8 +113,38 @@ func main() {
 		return
 	}
 
+	certPool := x509.NewCertPool()
+	certData, err := ioutil.ReadFile(config.Server.CertPath)
+	if err != nil {
+		fmt.Println("Error reading certificate file:", err)
+		return
+	}
+	// Parse the certificate data
+	block, _ := pem.Decode(certData)
+	if block == nil {
+		fmt.Println("Failed to parse PEM block containing certificate")
+		return
+	}
+	clientCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		fmt.Println("Error parsing X.509 certificate:", err)
+		return
+	}
+	certPool.AddCert(clientCert)
+
 	tlsConfig := tls.Config{
-		Certificates: []tls.Certificate{cert},
+		Certificates:       []tls.Certificate{cert},
+		InsecureSkipVerify: true,
+		NextProtos:         []string{"PRIM"},
+		ClientCAs:          certPool,
+	}
+
+	quicConf := quic.Config{
+		MaxIdleTimeout:        time.Millisecond * time.Duration(config.Transport.ConnectionIdleTimeout),
+		MaxIncomingStreams:    config.Transport.MaxBiStreams,
+		MaxIncomingUniStreams: config.Transport.MaxBiStreams,
+		KeepAlivePeriod:       time.Millisecond * time.Duration(config.Transport.KeepAliveInterval),
+		Allow0RTT:             true,
 	}
 
 	clusterParseList := strings.Split(config.Server.ClusterAddress, ":")
@@ -119,15 +152,15 @@ func main() {
 	clusterBindAddress := ""
 	if config.Server.PublicService {
 		if config.Server.IpVersion == "v4" {
-			config.Server.ClusterAddress = "0.0.0.0:" + clusterBindPort
+			clusterBindAddress = "0.0.0.0:" + clusterBindPort
 		} else {
-			config.Server.ClusterAddress = "[::]:" + clusterBindPort
+			clusterBindAddress = "[::]:" + clusterBindPort
 		}
 	} else {
 		if config.Server.IpVersion == "v4" {
-			config.Server.ClusterAddress = "127.0.0.1:" + clusterBindPort
+			clusterBindAddress = "127.0.0.1:" + clusterBindPort
 		} else {
-			config.Server.ClusterAddress = "[::1]:" + clusterBindPort
+			clusterBindAddress = "[::1]:" + clusterBindPort
 		}
 	}
 
@@ -136,34 +169,32 @@ func main() {
 	serviceBindAddress := ""
 	if config.Server.PublicService {
 		if config.Server.IpVersion == "v4" {
-			config.Server.ServiceAddress = "0.0.0.0:" + serviceBindPort
+			serviceBindAddress = "0.0.0.0:" + serviceBindPort
 		} else {
-			config.Server.ServiceAddress = "[::]:" + serviceBindPort
+			serviceBindAddress = "[::]:" + serviceBindPort
 		}
 	} else {
 		if config.Server.IpVersion == "v4" {
-			config.Server.ServiceAddress = "127.0.0.1:" + serviceBindPort
+			serviceBindAddress = "127.0.0.1:" + serviceBindPort
 		} else {
-			config.Server.ServiceAddress = "[::1]:" + serviceBindPort
+			serviceBindAddress = "[::1]:" + serviceBindPort
 		}
 	}
 
-	network := "tcp6"
+	// tls server
+	network1 := "tcp6"
 	if config.Server.IpVersion == "v4" {
-		network = "tcp4"
+		network1 = "tcp4"
 	}
-	listener, err := tls.Listen(network, config.Server.ServiceAddress, &tlsConfig)
+	listener1, err := tls.Listen(network1, serviceBindAddress, &tlsConfig)
 	if err != nil {
 		fmt.Println("Error creating listener:", err)
 		return
 	}
-	defer listener.Close()
-
-	fmt.Println("TLS server is listening on :443")
-
+	defer listener1.Close()
 	go func() {
 		for {
-			conn, err := listener.Accept()
+			conn, err := listener1.Accept()
 			if err != nil {
 				fmt.Println("Error accepting connection:", err)
 				continue
@@ -173,41 +204,97 @@ func main() {
 		}
 	}()
 
-	network = "udp6"
-	if config.Server.IpVersion == "v4" {
-		network = "udp4"
+	// scheduler connection
+	schedulerConn, err := quic.DialAddr(context.Background(), config.Scheduler.Address, &tlsConfig, &quicConf)
+	if err != nil {
+		fmt.Println("Error dialing scheduler:", err)
+		return
 	}
-	list := strings.Split(serviceBindAddress, ":")
-	port, err := strconv.Atoi(list[len(list)-1])
-	udpConn, err := net.ListenUDP(network, &net.UDPAddr{IP: net.ParseIP(serviceBindAddress[0 : len(serviceBindAddress)-len(list[len(list)-1])-1]), Port: port})
+	go func() {
+		conn, err := schedulerConn.OpenStream()
+		if err != nil {
+			fmt.Println("Error opening stream:", err)
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("%s %s", config.Server.ClusterAddress, myId)))
+		buf := make([]byte, 1024)
+		for {
+			n, err := conn.Read(buf)
+			if err != nil {
+				fmt.Println("Error reading from stream:", err)
+				return
+			}
+			fmt.Println("scheduler says: ", string(buf[:n]))
+		}
+	}()
+
+	// cluster server
+	network3 := "udp6"
+	if config.Server.IpVersion == "v4" {
+		network3 = "udp4"
+	}
+	list3 := strings.Split(clusterBindAddress, ":")
+	port3, err := strconv.Atoi(list3[len(list3)-1])
+	udpConn, err := net.ListenUDP(network3, &net.UDPAddr{IP: net.ParseIP(clusterBindAddress[0 : len(clusterBindAddress)-len(list3[len(list3)-1])-1]), Port: port3})
 	// ... error handling
-	tr := quic.Transport{
+	tr3 := quic.Transport{
 		Conn: udpConn,
 	}
-	quicConf := quic.Config{
-		MaxIdleTimeout:        time.Millisecond * time.Duration(config.Transport.ConnectionIdleTimeout),
-		MaxIncomingStreams:    config.Transport.MaxBiStreams,
-		MaxIncomingUniStreams: config.Transport.MaxBiStreams,
-		KeepAlivePeriod:       time.Millisecond * time.Duration(config.Transport.KeepAliveInterval),
-		Allow0RTT:             true,
-	}
-	ln, err := tr.Listen(&tlsConfig, &quicConf)
-	// ... error handling
+	listener4, err := tr3.Listen(&tlsConfig, &quicConf)
 	go func() {
 		for {
-			conn, err := ln.Accept(context.Background())
+			conn, err := listener4.Accept(context.Background())
 			if err != nil {
 				fmt.Println("Error accepting connection:", err)
 				continue
 			}
-			rw, err := conn.AcceptStream(context.Background())
-			if err != nil {
-				fmt.Println("Error accepting stream:", err)
-				continue
-			}
-			go echoHandler(rw)
+			go func() {
+				for {
+					rw, err := conn.AcceptStream(context.Background())
+					if err != nil {
+						fmt.Println("Error accepting stream:", err)
+						continue
+					}
+					go echoHandler(rw)
+				}
+			}()
 		}
 	}()
+
+	// quic server
+	network4 := "udp6"
+	if config.Server.IpVersion == "v4" {
+		network4 = "udp4"
+	}
+	list4 := strings.Split(serviceBindAddress, ":")
+	port4, err := strconv.Atoi(list4[len(list4)-1])
+	udpConn, err = net.ListenUDP(network4, &net.UDPAddr{IP: net.ParseIP(serviceBindAddress[0 : len(serviceBindAddress)-len(list4[len(list4)-1])-1]), Port: port4})
+	// ... error handling
+	tr4 := quic.Transport{
+		Conn: udpConn,
+	}
+	listener4, err = tr4.Listen(&tlsConfig, &quicConf)
+	if err != nil {
+		fmt.Println("Error creating listener:", err)
+		return
+	}
+	for {
+		conn, err := listener4.Accept(context.Background())
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+		go func() {
+			for {
+				rw, err := conn.AcceptStream(context.Background())
+				if err != nil {
+					fmt.Println("Error accepting stream:", err)
+					continue
+				}
+				go echoHandler(rw)
+			}
+		}()
+	}
 }
 
 func echoHandler(rw io.ReadWriter) {
