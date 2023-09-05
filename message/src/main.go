@@ -86,7 +86,7 @@ func main() {
 	serviceAddress := os.Getenv("SERVICE_ADDRESS")
 
 	var config Config
-	configPath = "/Users/slma/GolandProjects/prim-k8s/message/src/config.toml"
+	configPath = "./config.toml"
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
 		fmt.Println("decode toml failed:", err)
