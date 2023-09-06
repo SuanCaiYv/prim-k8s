@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0001
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0001/
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0002
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0002/
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0003
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0003/
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0004
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0004/
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0005
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0005/
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv0006
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 512Mi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard
+  hostPath:
+    path: /data/redis-pv0006/
