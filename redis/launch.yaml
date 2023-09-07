@@ -72,4 +72,4 @@ spec:
         storageClassName: redis-storage
         resources:
           requests:
-            storage: 64Mi
+            storage: 1Gi

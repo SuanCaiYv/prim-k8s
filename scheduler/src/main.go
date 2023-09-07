@@ -64,7 +64,7 @@ func main() {
 	serviceAddress := os.Getenv("SERVICE_ADDRESS")
 
 	var config Config
-	configPath = "./config.toml"
+	configPath = "/Users/joker/GolandProjects/prim-k8s/scheduler/src/config.toml"
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
 		fmt.Println("decode toml failed:", err)
@@ -159,9 +159,13 @@ func main() {
 		}
 	}
 
+	var password string
+	if len(config.Redis.Passwords) != 0 {
+		password = config.Redis.Passwords[0]
+	}
 	rdb := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:    config.Redis.Addresses,
-		Password: config.Redis.Passwords[0],
+		Password: password,
 	})
 	err = rdb.ForEachShard(context.Background(), func(ctx context.Context, shard *redis.Client) error {
 		return shard.Ping(ctx).Err()

@@ -6,7 +6,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
@@ -21,7 +21,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
@@ -36,7 +36,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
@@ -51,7 +51,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
@@ -66,7 +66,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
@@ -81,7 +81,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 512Mi
+    storage: 1Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: redis-storage
   hostPath:
