@@ -32,16 +32,16 @@ spec:
         - name: redis
           image: redis:7.0.0
           command:
-            - "redis-server"                  #redis启动命令
+            - "redis-server"
           args:
-            - "/etc/redis/redis.conf"         #redis-server后面跟的参数,换行代表空格
-            - "--protected-mode"              #允许外网访问
+            - "/etc/redis/redis.conf"
+            - "--protected-mode"
             - "no"
           resources:
-            requests:                         # 每个pod请求的资源
-              cpu: 200m                      # m代表千分之，这里申请2个逻辑核
-              memory: 1Gi                     # 内存申请4G大小
-            limits:                           # 资源限制
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
               cpu: 2000m
               memory: 4Gi
           ports:
@@ -52,24 +52,24 @@ spec:
               containerPort: 16379
               protocol: "TCP"
           volumeMounts:
-            - name: redis-conf              # 把下面创建的redis.conf配置文件挂载到容器的/etc/redis目录下
+            - name: redis-conf
               mountPath: /etc/redis
-            - name: redis-data              # 把叫做redis-data的volume挂载到容器的/var/lib/redis目录
+            - name: redis-data
               mountPath: /var/lib/redis
       volumes:
-        - name: redis-conf                  # 船舰一个名为redis-conf的volumes
+        - name: redis-conf
           configMap:
-            name: redis-config  # 引用上面创建的configMap卷
+            name: redis-config
             items:
-              - key: redis.conf             # configmap里面的redis.conf
-                path: redis.conf            # configmap里面的redis.conf放到volumes中叫做redistribution.conf
-  volumeClaimTemplates:                   # pod使用哪个pvc，这里是通过StorageClass自动创建pvc并对应上pv
+              - key: redis.conf
+                path: redis.conf
+  volumeClaimTemplates:
     - metadata:
-        name: redis-data                    # pvc创建一个volumes叫做redis-data
+        name: redis-data
       spec:
         accessModes:
           - ReadWriteOnce
-        storageClassName: standard
+        storageClassName: redis-storage
         resources:
           requests:
-            storage: 5Gi
+            storage: 64Mi

@@ -1,6 +1,6 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: redis-local-storage # StorageClass的name，后面需要声明使用的是这个StorageClass时都是用这个名字
+  name: redis-storage
 provisioner: k8s.io/minikube-hostpath
 volumeBindingMode: WaitForFirstConsumer
