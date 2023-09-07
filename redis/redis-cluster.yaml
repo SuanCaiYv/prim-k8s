@@ -98,6 +98,22 @@ spec:
     path: /data/redis-pv0006/
 ---
 
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  labels:
+    app: redis
+spec:
+  ports:
+    - name: redis-port
+      port: 6379
+  clusterIP: None
+  selector:
+    app: redis
+    appCluster: redis-cluster
+---
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
