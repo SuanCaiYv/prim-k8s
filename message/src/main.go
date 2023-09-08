@@ -9,7 +9,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/quic-go/quic-go"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -114,7 +113,7 @@ func main() {
 	}
 
 	certPool := x509.NewCertPool()
-	certData, err := ioutil.ReadFile(config.Server.CertPath)
+	certData, err := os.ReadFile(config.Server.CertPath)
 	if err != nil {
 		fmt.Println("Error reading certificate file:", err)
 		return
@@ -137,6 +136,7 @@ func main() {
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"PRIM"},
 		ClientCAs:          certPool,
+		ServerName:         config.Server.Domain,
 	}
 
 	quicConf := quic.Config{
