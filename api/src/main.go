@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"github.com/go-pg/pg/v10"
 	"golang.org/x/net/http2"
 	"io"
 	"net/http"
@@ -46,17 +48,49 @@ type Config struct {
 type SimpleServer struct {
 }
 
-func (s *SimpleServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
+func (s *SimpleServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		err := s.Get(w, r)
+		if err != nil {
+			fmt.Println("Error handling get:", err)
+		}
+	case http.MethodPost:
+		err := s.Post(w, r)
+		if err != nil {
+			fmt.Println("Error handling post:", err)
+		}
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
 
 func (s *SimpleServer) Get(resp http.ResponseWriter, req *http.Request) error {
-	return nil
+	path := req.URL.Path
+	query := req.URL.Query()
+	resp.Header().Set("Content-Type", "text/plain")
+	_, err := resp.Write([]byte(fmt.Sprintf("hello for get, path: %s, query: %s", path, query.Encode())))
+	return err
+}
+
+func (s *SimpleServer) Post(resp http.ResponseWriter, req *http.Request) error {
+	path := req.URL.Path
+	query := req.URL.Query()
+	body := make([]byte, 2048)
+	n, err := req.Body.Read(body)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	resp.Header().Set("Content-Type", "text/plain")
+	_, err = resp.Write([]byte(fmt.Sprintf("hello for post, path: %s, query: %s, body: %s", path, query.Encode(), string(body[:n]))))
+	return err
 }
 
 func main() {
 	configPath := os.Getenv("CONFIG_PATH")
 
 	var config Config
-	configPath = "/Users/joker/GolandProjects/prim-k8s/api/src/config.toml"
+	configPath = os.Getenv("HOME") + "/GolandProjects/prim-k8s/api/src/config.toml"
 	_, err := toml.DecodeFile(configPath, &config)
 	if err != nil {
 		fmt.Println("decode toml failed:", err)
@@ -95,6 +129,21 @@ func main() {
 		ClientCAs:          certPool,
 		ServerName:         config.Rpc.Scheduler.Domain,
 	}
+
+	db := pg.Connect(&pg.Options{
+		Addr:     config.Sql.Address,
+		User:     config.Sql.Username,
+		Password: config.Sql.Password,
+		Database: config.Sql.Database,
+		PoolSize: config.Sql.MaxConnections,
+	})
+
+	err = db.Ping(context.Background())
+	if err != nil {
+		fmt.Println("Error connecting to database:", err)
+		return
+	}
+	fmt.Println("Connected to database")
 
 	// rpc client
 	go func() {
@@ -136,7 +185,18 @@ func main() {
 			go echoHandler(conn)
 		}
 	}()
-	http2.ConfigureServer(&http.Server{}, nil)
+
+	// http server
+	httpServer := &http.Server{
+		Addr:    config.Server.ServiceAddress,
+		Handler: &SimpleServer{},
+	}
+	http2.ConfigureServer(httpServer, nil)
+	err = httpServer.ListenAndServeTLS(config.Server.CertPath, config.Server.KeyPath)
+	if err != nil {
+		fmt.Println("Error creating https server:", err)
+		return
+	}
 }
 
 func echoHandler(rw io.ReadWriter) {

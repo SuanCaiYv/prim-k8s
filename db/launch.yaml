@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      initContainers:
+        - name: init-db
+          image: postgres:15.0
+          command:
+            - sh
+            - -c
+          args:
+            - "psql -h localhost -U prim -d prim -f /mnt/init.sql"
+          volumeMounts:
+            - name: init-postgres
+              mountPath: /mnt
+      containers:
+        - name: postgres
+          image: postgres:15.0
+          env:
+            - name: POSTGRES_DB
+              value: prim  # Change to your desired database name
+            - name: POSTGRES_USER
+              value: prim  # Change to your desired username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: postgres-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: init-postgres
+          configMap:
+            name: postgres-initdb
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-pvc
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: postgre-storage  # Change to your desired storage class
+        resources:
+          requests:
+            storage: 5Gi
