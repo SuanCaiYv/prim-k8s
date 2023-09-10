@@ -1,24 +1,18 @@
-#apiVersion: v1
-#kind: Secret
-#metadata:
-#  name: postgres-secret
-#type: Opaque
-#data:
-#  postgres-password: cHJpbTEyMzQ1Ngo=
-#---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  postgres-password: cHJpbTEyMzQ1Ngo=
+---
 
 apiVersion: v1
-Kind: ConfigMap
+kind: ConfigMap
 metadata:
   name: postgres-initdb
 data:
   init.sql: |
-    CREATE USER prim WITH PASSWORD 'prim123456';
-
-    CREATE DATABASE prim;
-
-    GRANT ALL PRIVILEGES ON DATABASE prim TO prim;
-
     -- CREATE SCHEMA IF NOT EXISTS api;
 
     CREATE SCHEMA IF NOT EXISTS api;
@@ -219,4 +213,3 @@ data:
 
     ALTER TABLE IF EXISTS api.user_group_list
         OWNER to prim;
----

@@ -6,7 +6,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: 1Gi
+    storage: 5Gi
   persistentVolumeReclaimPolicy: Retain
   storageClassName: postgres-storage
   hostPath:

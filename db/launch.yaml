@@ -8,22 +8,13 @@ spec:
   selector:
     matchLabels:
       app: postgres
+      appCluster: postgres-cluster
   template:
     metadata:
       labels:
         app: postgres
+        appCluster: postgres-cluster
     spec:
-      initContainers:
-        - name: init-db
-          image: postgres:15.0
-          command:
-            - sh
-            - -c
-          args:
-            - "psql -h localhost -U prim -d prim -f /mnt/init.sql"
-          volumeMounts:
-            - name: init-postgres
-              mountPath: /mnt
       containers:
         - name: postgres
           image: postgres:15.0
@@ -42,6 +33,8 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            - name: init-postgres
+              mountPath: /docker-entrypoint-initdb.d
       volumes:
         - name: postgres-data
           persistentVolumeClaim:
@@ -51,11 +44,61 @@ spec:
             name: postgres-initdb
   volumeClaimTemplates:
     - metadata:
-        name: postgres-pvc
+        name: postgres-data
       spec:
         accessModes:
           - ReadWriteOnce
-        storageClassName: postgre-storage  # Change to your desired storage class
+        storageClassName: postgres-storage
         resources:
           requests:
             storage: 5Gi
+
+
+#apiVersion: apps/v1
+#kind: StatefulSet
+#metadata:
+#  name: postgresql
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: postgresql
+#  serviceName: postgresql
+#  template:
+#    metadata:
+#      labels:
+#        app: postgresql
+#    spec:
+#      containers:
+#        - name: postgres
+#          image: postgres:15.0
+#          env:
+#            - name: POSTGRES_DB
+#              value: prim
+#            - name: POSTGRES_USER
+#              value: prim
+#            - name: POSTGRES_PASSWORD
+#              valueFrom:
+#                secretKeyRef:
+#                  name: postgres-secret
+#                  key: postgres-password
+#          ports:
+#            - containerPort: 5432
+#          volumeMounts:
+#            - name: data
+#              mountPath: /var/lib/postgresql/data
+#          lifecycle:
+#            postStart:
+#              exec:
+#                command: [ "/bin/bash", "-c", "if [[ ! -f /var/lib/postgresql/data/initialized ]]; then psql -U prim -d prim < /docker-entrypoint-initdb.d/init.sql && touch /var/lib/postgresql/data/initialized; fi" ]
+#  volumeClaimTemplates:
+#    - metadata:
+#        name: postgres-data
+#      spec:
+#        accessModes:
+#          - ReadWriteOnce
+#        storageClassName: postgres-storage
+#        resources:
+#          requests:
+#            storage: 5Gi
+
