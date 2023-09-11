@@ -17,41 +17,48 @@ spec:
     spec:
       containers:
         - name: kafka
-          image: bitnami/kafka:3.5
+          image: bitnami/kafka:latest
           ports:
             - containerPort: 9092
             - containerPort: 9093
           lifecycle:
             postStart:
+              exec:
+                command:
+                 - "sudo chown -R 1001:1001 /bitnami/kafka"
+                 - "/bin/sh -c /parse-hostname.sh"
           env:
             # KRaft settings
-            - name: KAFKA_CFG_NODE_ID
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
             - name: KAFKA_CFG_PROCESS_ROLES
               value: controller,broker
             - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
               value: 0@kafka-0.kafka-service.default.svc.cluster.local:9093,1@kafka-1.kafka-service.default.svc.cluster.local:9093,2@kafka-2.kafka-service.default.svc.cluster.local:9093
             - name: ALLOW_PLAINTEXT_LISTENER
               value: "yes"
-            - name: KAFKA_CFG_LISTENERS
-              value: PLAINTEXT://:9092,CONTROLLER://:9093
-            - name: KAFKA_CFG_ADVERTISED_LISTENERS
-              value: PLAINTEXT://$(POD_IP):9092,CONTROLLER://$(POD_IP):9093
-            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
-              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-            - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
-              value: CONTROLLER
-            - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
-              value: PLAINTEXT
+            - name: KAFKA_KRAFT_CLUSTER_ID
+              value: abcdefghijklmnopqrstuv
+#            - name: KAFKA_CFG_LISTENERS
+#              value: PLAINTEXT://:9092,CONTROLLER://:9093
+#            - name: KAFKA_CFG_ADVERTISED_LISTENERS
+#              value: PLAINTEXT://$(POD_IP):9092,CONTROLLER://$(POD_IP):9093
+#            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+#              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+#            - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+#              value: CONTROLLER
+#            - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+#              value: PLAINTEXT
           volumeMounts:
             - name: kafka-data
               mountPath: /bitnami/kafka
+            - name: parse-hostname
+              mountPath: /parse-hostname.sh
       volumes:
         - name: kafka-data
           persistentVolumeClaim:
             claimName: kafka-pvc
+        - name: parse-hostname
+          configMap:
+            name: parse-hostname
   volumeClaimTemplates:
     - metadata:
         name: kafka-data
