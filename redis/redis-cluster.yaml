@@ -170,10 +170,10 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 1Gi
+              memory: 256Mi
             limits:
-              cpu: 2000m
-              memory: 4Gi
+              cpu: 400m
+              memory: 512Gi
           ports:
             - name: redis
               containerPort: 6379
