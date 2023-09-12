@@ -2,3 +2,4 @@
 /cert/ca.yaml
 /cert/server.yaml
 /cert/client.yaml
+kafka/kafka/*

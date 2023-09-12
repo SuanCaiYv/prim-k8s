@@ -1,22 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 
-# Get the hostname
-HOSTNAME=$(hostname)
+# Read the hostname as input
+hostname_input=$(hostname)
 
-# Define a regular expression pattern to extract the number at the end
-PATTERN="([0-9]+)$"
+# Define a regular expression pattern to match the format "xxx-xxx-...xxx-number"
+pattern="^([^-]+-)*[0-9]+$"
 
 # Check if the hostname matches the expected format
-if [[ $HOSTNAME =~ $PATTERN ]]; then
+if [[ $hostname_input =~ $pattern ]]; then
   # Extract the number from the hostname
-  NODE_ID=${BASH_REMATCH[1]}
+  node_id=${hostname_input##*-}
 
-  # Set the NODE_ID as an environment variable
-  export KAFKA_CFG_NODE_ID="$NODE_ID"
-
-  # Print a message indicating success
-  echo "Parsed NODE_ID: $KAFKA_CFG_NODE_ID"
+  echo "node_id: $node_id"
 else
-  # Print an error message if the hostname does not match the expected format
-  echo "Error: Hostname does not match the expected format: $HOSTNAME"
+  echo "bad $hostname_input"
 fi
