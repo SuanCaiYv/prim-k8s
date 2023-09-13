@@ -16,7 +16,7 @@ tar -zxvf redis-7.0.0.tar.gz
 
 cd redis-7.0.0 && make
 
-# redis-app-0.redis-service.default.svc.cluster.local
+# redis-0.redis-service.default.svc.cluster.local
 nslookup redis-service.default.svc.cluster.local
 
 # now you can get 6 ip address, and we set front 3 for master, back 3 for slave.

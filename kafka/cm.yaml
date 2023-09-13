@@ -3,12 +3,31 @@ kind: ConfigMap
 metadata:
   name: kafka-config
 data:
+  init.sh: |
+    #!/bin/bash
+    if [ -f /kafka/data/inited ]; then
+      echo "initialized."
+      exit 0
+    fi
+    cluster_id=$(head -n 1 /kafka/tmp/cluster.id)
+    cp /kafka/tmp/server.properties /kafka/config/kraft/server.properties
+    hostname_input=$(hostname)
+    pattern="^([^-]+-)*[0-9]+$"
+    node_id=${hostname_input##*-}
+    echo "node.id=$node_id" >> /kafka/config/kraft/server.properties
+    /kafka/bin/kafka-storage.sh format -t "$cluster_id" -c /kafka/config/kraft/server.properties
+    touch /kafka/data/inited
+  set-node-id.sh: |
+    cp /kafka/tmp/server.properties /kafka/config/kraft/server.properties
+    hostname_input=$(hostname)
+    pattern="^([^-]+-)*[0-9]+$"
+    node_id=${hostname_input##*-}
+    echo "node.id=$node_id" >> /kafka/config/kraft/server.properties
   server.properties: |
     process.roles=broker,controller
-    controller.quorum.voters=0@kafka-0.kafka-service.default.svc.cluster.local:9093
-    listeners=PLAINTEXT://:9092,CONTROLLER://:9192
+    controller.quorum.voters=0@kafka-mq-0.kafka-mq-service.default.svc.cluster.local:9093,1@kafka-mq-1.kafka-mq-service.default.svc.cluster.local:9093,2@kafka-mq-2.kafka-mq-service.default.svc.cluster.local:9093
+    listeners=PLAINTEXT://:9092,CONTROLLER://:9093
     inter.broker.listener.name=PLAINTEXT
-    advertised.listeners=PLAINTEXT://0@kafka-0.kafka-service.default.svc.cluster.local:9092
     controller.listener.names=CONTROLLER
     listener.security.protocol.map=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SSL:SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_SSL:SASL_SSL
     num.network.threads=4
@@ -27,3 +46,5 @@ data:
     log.retention.check.interval.ms=300000
     group.min.session.timeout.ms=200
     group.max.session.timeout.ms=30000
+  cluster.id: |
+    kTbEieHETFOVQsdEJTx59A
