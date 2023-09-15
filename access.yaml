@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ubuntu-pod-service
+  labels:
+    app: ubuntu-pod
+spec:
+  type: NodePort
+  selector:
+    app: ubuntu-pod
+  ports:
+    - port: 8290
+      nodePort: 30290
+      protocol: TCP
+
+# iptables -t nat -A POSTROUTING -p tcp -d <target_ip> --dport <bind_port> -j SNAT --to-source <local_ip>
+# iptables -t nat -A PREROUTING -p tcp --dport <bind_port> -j DNAT --to-destination <target_ip>:<target_port>
+# replace tcp -> udp for udp

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	listener, err := net.ListenPacket("udp", "0.0.0.0:8190")
+	listener, err := net.ListenPacket("udp", "0.0.0.0:8390")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -22,7 +22,7 @@ func main() {
 		req := buf[:n]
 		fmt.Println(addr)
 		hostname, _ := os.Hostname()
-		resp := fmt.Sprintf("I'm udp server running on %s, you have request for %s", hostname, string(req))
+		resp := fmt.Sprintf("I'm udp server running on %s, you have request for %s, and your address is: %s", hostname, string(req), addr)
 		_, _ = listener.WriteTo([]byte(resp), addr)
 	}
 }

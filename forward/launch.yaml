@@ -1,23 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple-forward-1
+  name: simple-forward
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: simple-forward-1
+      app: simple-forward
   template:
     metadata:
       labels:
-        app: simple-forward-1
+        app: simple-forward
     spec:
       containers:
-        - image: codewithbuff/simple-forward:0.1.3
-          name: simple-forward-1
+        - image: codewithbuff/simple-forward:0.1.4
+          name: simple-forward
           ports:
             - name: port
-              containerPort: 8190
+              containerPort: 8390
+              protocol: UDP
           env:
             - name: TARGET_IP
               value: "kafka-mq-0.kafka-mq-service.default.svc.cluster.local"
